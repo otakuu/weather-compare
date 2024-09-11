@@ -248,6 +248,17 @@
 
             document.querySelectorAll('.location-checkbox').forEach(element => {
                 element.addEventListener('change', updateCharts);
+                // save the selected locations in the local storage
+                if (localStorage.getItem(element.id)) {
+                    element.checked = true;
+                }
+                element.addEventListener('change', () => {
+                    if (element.checked) {
+                        localStorage.setItem(element.id, 'true');
+                    } else {
+                        localStorage.removeItem(element.id);
+                    }
+                });
             });
 
             // Initial chart update with preselected Solothurn
