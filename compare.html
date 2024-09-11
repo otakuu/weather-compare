@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Forecast Comparison</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <h1 class="mb-4">Weather Forecast Comparison</h1>
+        <div class="mb-4">
+            <h5>Select Locations:</h5>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input location-checkbox" value="https://www.srf.ch/meteoapi/forecastpoint/47.2045,7.5449" id="solothurn" checked>
+                <label class="form-check-label" for="solothurn">Solothurn</label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input location-checkbox" value="https://www.srf.ch/meteoapi/forecastpoint/43.3000,5.4000" id="marseille">
+                <label class="form-check-label" for="marseille">Marseille</label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input location-checkbox" value="https://www.srf.ch/meteoapi/forecastpoint/45.6449,13.7789" id="trieste">
+                <label class="form-check-label" for="trieste">Trieste</label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input location-checkbox" value="https://www.srf.ch/meteoapi/forecastpoint/46.0600,14.5100" id="ljubljana">
+                <label class="form-check-label" for="ljubljana">Ljubljana</label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input location-checkbox" value="https://www.srf.ch/meteoapi/forecastpoint/36.9261,14.7366" id="ragusa">
+                <label class="form-check-label" for="ragusa">Ragusa</label>
+            </div>
+        </div>
+        <div id="averages" class="mb-4">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Location</th>
+                        <th>Average 🌡️Temperature (°C)</th>
+                        <th>Average ☀️Sunshine Duration (hours)</th>
+                        <th>Average ⛆ Rain (mm)</th>
+                    </tr>
+                </thead>
+                <tbody id="averagesBody">
+                </tbody>
+            </table>
+        </div>
+        <div class="mb-4">
+            <h5>Temperature and Rain</h5>
+            <canvas id="tempRainChart" width="800" height="400"></canvas>
+        </div>
+        <div class="mb-4">
+            <h5>Sunshine Duration</h5>
+            <canvas id="sunshineChart" width="800" height="400"></canvas>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tempRainCtx = document.getElementById('tempRainChart').getContext('2d');
+            const sunshineCtx = document.getElementById('sunshineChart').getContext('2d');
+            let tempRainChart, sunshineChart;
+
+            const temperatureColors = [
+                { background: 'rgba(255, 99, 132, 0.2)', border: 'rgba(255, 99, 132, 1)' },
+                { background: 'rgba(54, 162, 235, 0.2)', border: 'rgba(54, 162, 235, 1)' },
+                { background: 'rgba(255, 159, 64, 0.2)', border: 'rgba(255, 159, 64, 1)' },
+                { background: 'rgba(75, 192, 192, 0.2)', border: 'rgba(75, 192, 192, 1)' },
+                { background: 'rgba(153, 102, 255, 0.2)', border: 'rgba(153, 102, 255, 1)' }
+            ];
+
+            const sunshineColors = [
+                { background: 'rgba(255, 206, 86, 0.6)', border: 'rgba(255, 206, 86, 1)' },
+                { background: 'rgba(255, 223, 128, 0.6)', border: 'rgba(255, 223, 128, 1)' },
+                { background: 'rgba(255, 239, 170, 0.6)', border: 'rgba(255, 239, 170, 1)' },
+                { background: 'rgba(255, 255, 204, 0.6)', border: 'rgba(255, 255, 204, 1)' },
+                { background: 'rgba(255, 255, 153, 0.6)', border: 'rgba(255, 255, 153, 1)' }
+            ];
+
+            function updateCharts() {
+                const checkboxes = document.querySelectorAll('.location-checkbox:checked');
+                const urls = Array.from(checkboxes).map(checkbox => checkbox.value);
+
+                Promise.all(urls.map(url => fetch(url)))
+                    .then(responses => Promise.all(responses.map(response => response.json())))
+                    .then(dataArray => {
+                        let labels = dataArray[0].days.slice(0, 8).map(day => new Date(day.date_time).toLocaleDateString('en-US',{
+                              weekday: "short",
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            }));
+                        const tempDatasets = [];
+                        const rainDatasets = [];
+                        const sunshineDatasets = [];
+                        let averagesHTML = '';
+
+                        dataArray.forEach((data, index) => {
+                            const locationName = data.geolocation.default_name;
+                            const temperatures = data.days.slice(0, 8).map(day => day.TX_C).filter(temp => temp !== null && temp !== undefined);
+                            const sunshine = data.days.slice(0, 8).map(day => day.SUN_H).filter(sun => sun !== null && sun !== undefined);
+                            const rain = data.days.slice(0, 8).map(day => day.RRR_MM).filter(rain => rain !== null && rain !== undefined);
+
+                            const avgTemp = temperatures.length ? (temperatures.reduce((a, b) => a + b, 0) / temperatures.length).toFixed(1) : 'N/A';
+                            const avgSunshine = sunshine.length ? (sunshine.reduce((a, b) => a + b, 0) / sunshine.length).toFixed(1) : 'N/A';
+                            const avgRain = rain.length ? (rain.reduce((a, b) => a + b, 0) / rain.length).toFixed(1) : 'N/A';
+
+                            averagesHTML += `
+                                <tr>
+                                    <td>${locationName}</td>
+                                    <td>${avgTemp}</td>
+                                    <td>${avgSunshine}</td>
+                                    <td>${avgRain}</td>
+                                </tr>
+                            `;
+
+                            tempDatasets.push({
+                                label: `${locationName} - Max Temp (°C)`,
+                                data: temperatures,
+                                borderColor: temperatureColors[index % temperatureColors.length].border,
+                                backgroundColor: temperatureColors[index % temperatureColors.length].background,
+                                fill: false,
+                                tension: 0.1,
+                                yAxisID: 'y-axis-temp',
+                                type: 'line'
+                            });
+
+                            rainDatasets.push({
+                                label: `${locationName} - Rain (mm)`,
+                                data: rain,
+                                borderColor: temperatureColors[index % temperatureColors.length].border,
+                                backgroundColor: temperatureColors[index % temperatureColors.length].background,
+                                borderWidth: 1,
+                                yAxisID: 'y-axis-rain',
+                                type: 'bar',
+                                barPercentage: 0.5
+                            });
+
+                            sunshineDatasets.push({
+                                label: `${locationName} - Sunshine Duration (hours)`,
+                                data: sunshine,
+                                backgroundColor: sunshineColors[index % sunshineColors.length].background,
+                                borderColor: sunshineColors[index % sunshineColors.length].border,
+                                borderWidth: 1,
+                                type: 'bar',
+                                barPercentage: 0.5
+                            });
+                        });
+
+                        document.getElementById('averagesBody').innerHTML = averagesHTML;
+
+                        if (tempRainChart) {
+                            tempRainChart.destroy();
+                        }
+                        if (sunshineChart) {
+                            sunshineChart.destroy();
+                        }
+
+                        tempRainChart = new Chart(tempRainCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: labels,
+                                datasets: [...tempDatasets, ...rainDatasets]
+                            },
+                            options: {
+                                responsive: true,
+                                plugins: {
+                                    legend: {
+                                        position: 'top',
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: '8-Day Temperature and Rain Comparison'
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        title: {
+                                            display: true,
+                                            text: 'Date'
+                                        }
+                                    },
+                                    'y-axis-temp': {
+                                        type: 'linear',
+                                        position: 'left',
+                                        title: {
+                                            display: true,
+                                            text: 'Temperature (°C)'
+                                        },
+                                        grid: {
+                                            drawOnChartArea: true
+                                        }
+                                    },
+                                    'y-axis-rain': {
+                                        type: 'linear',
+                                        position: 'right',
+                                        title: {
+                                            display: true,
+                                            text: 'Rain (mm)'
+                                        },
+                                        grid: {
+                                            drawOnChartArea: false
+                                        }
+                                    }
+                                }
+                            }
+                        });
+
+                        sunshineChart = new Chart(sunshineCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: labels,
+                                datasets: sunshineDatasets
+                            },
+                            options: {
+                                responsive: true,
+                                plugins: {
+                                    legend: {
+                                        position: 'top',
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: '8-Day Sunshine Duration Comparison'
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        title: {
+                                            display: true,
+                                            text: 'Date'
+                                        }
+                                    },
+                                    y: {
+                                        title: {
+                                            display: true,
+                                            text: 'Sunshine Duration (hours)'
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching the forecasts:', error);
+                    });
+            }
+
+            document.querySelectorAll('.location-checkbox').forEach(element => {
+                element.addEventListener('change', updateCharts);
+            });
+
+            // Initial chart update with preselected Solothurn
+            updateCharts();
+        });
+    </script>
+</body>
+</html>
