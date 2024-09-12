@@ -177,7 +177,7 @@
                                 scales: {
                                     x: {
                                         title: {
-                                            display: true,
+                                            display: false,
                                             text: 'Date'
                                         }
                                     },
@@ -194,6 +194,8 @@
                                     },
                                     'y-axis-rain': {
                                         type: 'linear',
+                                        min: 0,
+                                        max: 20,
                                         position: 'right',
                                         title: {
                                             display: true,
@@ -220,7 +222,7 @@
                                         position: 'top',
                                     },
                                     title: {
-                                        display: true,
+                                        display: false,
                                         text: '8-Day Sunshine Duration Comparison'
                                     }
                                 },
