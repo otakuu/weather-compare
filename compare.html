@@ -102,6 +102,7 @@
 
                         dataArray.forEach((data, index) => {
                             const locationName = data.geolocation.default_name;
+                            const id = data.geolocation.id;
                             const temperatures = data.days.slice(0, 8).map(day => day.TX_C).filter(temp => temp !== null && temp !== undefined);
                             const sunshine = data.days.slice(0, 8).map(day => day.SUN_H).filter(sun => sun !== null && sun !== undefined);
                             const rain = data.days.slice(0, 8).map(day => day.RRR_MM).filter(rain => rain !== null && rain !== undefined);
@@ -110,9 +111,10 @@
                             const avgSunshine = sunshine.length ? (sunshine.reduce((a, b) => a + b, 0) / sunshine.length).toFixed(1) : 'N/A';
                             const avgRain = rain.length ? (rain.reduce((a, b) => a + b, 0) / rain.length).toFixed(1) : 'N/A';
 
+                            let link = "https://www.srf.ch/meteo/wetter/-/"+id;
                             averagesHTML += `
                                 <tr>
-                                    <td>${locationName}</td>
+                                    <td><a href="${link}">${locationName}</a></td>
                                     <td>${avgTemp}</td>
                                     <td>${avgSunshine}</td>
                                     <td>${avgRain}</td>
